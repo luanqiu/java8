@@ -356,7 +356,9 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
      * @throws InterruptedException {@inheritDoc}
      * @throws NullPointerException {@inheritDoc}
      */
+    // 新增，如果队列满，无限阻塞
     public void put(E e) throws InterruptedException {
+        // 元素不能为空
         checkNotNull(e);
         final ReentrantLock lock = this.lock;
         lock.lockInterruptibly();
@@ -372,7 +374,7 @@ public class ArrayBlockingQueue<E> extends AbstractQueue<E>
     }
 
     private void enqueue(E x) {
-        // assert lock.getHoldCount() == 1;
+        // assert lock.getHoldCount() == 1; 同一时刻只能一个线程进行操作此方法
         // assert items[putIndex] == null;
         final Object[] items = this.items;
         // putIndex 为本次插入的位置

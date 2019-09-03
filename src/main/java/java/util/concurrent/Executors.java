@@ -169,6 +169,8 @@ public class Executors {
      */
     public static ExecutorService newSingleThreadExecutor() {
         return new FinalizableDelegatedExecutorService
+            // 前两个参数规定了这个线程池一次只能消费一个线程
+            // 第五个参数使用的是 LinkedBlockingQueue,说明当请求超过单线程消费能力时，就会排队
             (new ThreadPoolExecutor(1, 1,
                                     0L, TimeUnit.MILLISECONDS,
                                     new LinkedBlockingQueue<Runnable>()));

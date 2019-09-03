@@ -444,7 +444,6 @@ public class ArrayList<E> extends AbstractList<E>
   }
   private void ensureCapacityInternal(int minCapacity) {
     //如果是空数组，就从最小容量和默认容量10之间取最大值
-    //所以当你在初始化数组大小时，如果你给定的初始化大小是 5，最终其实会初始化大小其实为 10
     if (elementData == DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
       minCapacity = Math.max(DEFAULT_CAPACITY, minCapacity);
     }
