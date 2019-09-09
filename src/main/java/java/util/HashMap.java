@@ -254,10 +254,10 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     static final int MAXIMUM_CAPACITY = 1 << 30;
    //负载因子默认值
     static final float DEFAULT_LOAD_FACTOR = 0.75f;
-    //bin(桶)容量大于8时，链表转化成红黑树
+    //bin(桶)容量大于等于8时，链表转化成红黑树
     static final int TREEIFY_THRESHOLD = 8;
 
-    //bin(桶)容量小于6时，红黑树转化成链表
+    //bin(桶)容量小于等于6时，红黑树转化成链表
     static final int UNTREEIFY_THRESHOLD = 6;
 
    //容量最小64时才会转会成红黑树
@@ -976,6 +976,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      * to incorporate impact of the highest bits that would otherwise
      * never be used in index calculations because of table bounds.
      */
+
     static final int hash(Object key) {
         int h;
         return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
@@ -1358,11 +1359,19 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
                     //规避了8版本以下的死锁问题
                     else { // preserve order
+                        // loHead 表示老值,老值的意思是扩容后，该链表中计算出索引位置不变的元素
+                        // hiHead 表示新值，新值的意思是扩容后，计算出索引位置发生变化的元素
+                        // 举个例子，数组大小是 8 ，在数组索引位置是 1 的地方挂着两个值，两个值的 hashcode 是9和33。
+                        // 当数组发生扩容时，新数组的大小是 16，此时 hashcode 是 33 的值计算出来的数组索引位置仍然是 1，我们称为老值
+                        // hashcode 是 9 的值计算出来的数组索引位置是 9，就发生了变化，我们称为新值。
                         Node<K,V> loHead = null, loTail = null;
                         Node<K,V> hiHead = null, hiTail = null;
                         Node<K,V> next;
+                        // java 7 是在 while 循环里面，单个计算好数组索引位置后，单个的插入数组中，在多线程情况下，会有成环问题
+                        // java 8 是等链表整个 while 循环结束后，才给数组赋值，所以多线程情况下，也不会成环
                         do {
                             next = e.next;
+                            // (e.hash & oldCap) == 0 表示老值链表
                             if ((e.hash & oldCap) == 0) {
                                 if (loTail == null)
                                     loHead = e;
@@ -1370,6 +1379,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                                     loTail.next = e;
                                 loTail = e;
                             }
+                            // (e.hash & oldCap) == 0 表示新值链表
                             else {
                                 if (hiTail == null)
                                     hiHead = e;
@@ -1378,10 +1388,12 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                                 hiTail = e;
                             }
                         } while ((e = next) != null);
+                        // 老值链表赋值给原来的数组索引位置
                         if (loTail != null) {
                             loTail.next = null;
                             newTab[j] = loHead;
                         }
+                        // 新值链表赋值到新的数组索引位置
                         if (hiTail != null) {
                             hiTail.next = null;
                             newTab[j + oldCap] = hiHead;
