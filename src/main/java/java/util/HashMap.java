@@ -1245,8 +1245,8 @@ public class HashMap<K,V> extends AbstractMap<K,V>
     //6:链表中的元素的key有和入参key相等的，允许覆盖值的话直接覆盖
     //put方法默认覆盖
     //7:如果新增的元素在链表中不存在，则新增，新增到链表的尾部
-    //8:新增时，判断如果链表的长度大于8时，转红黑树
-    //9:如果数组的实际使用大小大于扩容的门槛，直接扩容
+    //8:新增时，判断如果链表的长度大于等于8时，转红黑树
+    //9:如果数组的实际使用大小大于等于扩容的门槛，直接扩容
     final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
                    boolean evict) {
         Node<K,V>[] tab; Node<K,V> p; int n, i;
@@ -1277,7 +1277,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                         //e和p.next都是持有对null的引用,即使p.next后来赋予了值
                         // 只是改变了p.next指向的引用，和e没有关系
                         p.next = newNode(hash, key, value, null);
-                        //新增时，链表的长度大于8时，链表转红黑树
+                        //新增时，链表的长度大于等于8时，链表转红黑树
                         if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
                             treeifyBin(tab, hash);
                         break;
@@ -1318,7 +1318,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
         int oldThr = threshold;
         int newCap, newThr = 0;
         if (oldCap > 0) {
-            //老数组大小大于最大值，不扩容
+            //老数组大小大于等于最大值，不扩容
             if (oldCap >= MAXIMUM_CAPACITY) {
                 threshold = Integer.MAX_VALUE;
                 return oldTab;
@@ -1357,7 +1357,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
                     //红黑树
                     else if (e instanceof TreeNode)
                         ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
-                    //规避了8版本以下的死锁问题
+                    //规避了8版本以下的成环问题
                     else { // preserve order
                         // loHead 表示老值,老值的意思是扩容后，该链表中计算出索引位置不变的元素
                         // hiHead 表示新值，新值的意思是扩容后，计算出索引位置发生变化的元素
