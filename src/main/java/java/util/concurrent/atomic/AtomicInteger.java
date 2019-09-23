@@ -65,15 +65,30 @@ public class AtomicInteger extends Number implements java.io.Serializable {
         } catch (Exception ex) { throw new Error(ex); }
     }
 
-    private volatile int value;
+
 
     /**
      * Creates a new AtomicInteger with the given initial value.
      *
      * @param initialValue the initial value
      */
+    private volatile int value;
+
+    // 初始化
     public AtomicInteger(int initialValue) {
         value = initialValue;
+    }
+    // 得到当前值
+    public final int get() {
+        return value;
+    }
+    // 自增 1，并返回自增之前的值
+    public final int getAndIncrement() {
+        return unsafe.getAndAddInt(this, valueOffset, 1);
+    }
+    // 自减 1，并返回自增之前的值
+    public final int getAndDecrement() {
+        return unsafe.getAndAddInt(this, valueOffset, -1);
     }
 
     /**
@@ -87,9 +102,7 @@ public class AtomicInteger extends Number implements java.io.Serializable {
      *
      * @return the current value
      */
-    public final int get() {
-        return value;
-    }
+
 
     /**
      * Sets to the given value.
@@ -154,18 +167,14 @@ public class AtomicInteger extends Number implements java.io.Serializable {
      *
      * @return the previous value
      */
-    public final int getAndIncrement() {
-        return unsafe.getAndAddInt(this, valueOffset, 1);
-    }
+
 
     /**
      * Atomically decrements by one the current value.
      *
      * @return the previous value
      */
-    public final int getAndDecrement() {
-        return unsafe.getAndAddInt(this, valueOffset, -1);
-    }
+
 
     /**
      * Atomically adds the given value to the current value.

@@ -37,9 +37,11 @@ package java.util.concurrent;
 import java.util.concurrent.locks.AbstractQueuedSynchronizer;
 
 /**
+ * 同步器可以帮助一个或一组线程等待，直到等待的线程执行完成之后再执行
  * A synchronization aid that allows one or more threads to wait until
  * a set of operations being performed in other threads completes.
  *
+ * CountDownLatch 初始化时可以传 count
  * <p>A {@code CountDownLatch} is initialized with a given <em>count</em>.
  * The {@link #await await} methods block until the current count reaches
  * zero due to invocations of the {@link #countDown} method, after which
@@ -169,16 +171,20 @@ public class CountDownLatch {
             return getState();
         }
 
+        // 如果当前同步器的状态是 0 的话，表示可获得锁
         protected int tryAcquireShared(int acquires) {
             return (getState() == 0) ? 1 : -1;
         }
-
+        // 对 state 进行递减，直到 state 变成 0；
+        // state 递减为 0 时，返回 true，其余返回 false
         protected boolean tryReleaseShared(int releases) {
-            // Decrement count; signal when transition to zero
+            // 自旋保证 CAS 一定可以成功
             for (;;) {
                 int c = getState();
+                // state 已经是 0 了，直接返回 false
                 if (c == 0)
                     return false;
+                // 对 state 进行递减
                 int nextc = c-1;
                 if (compareAndSetState(c, nextc))
                     return nextc == 0;

@@ -40,6 +40,8 @@ package java.util.concurrent;
  * Implementors define a single method with no arguments called
  * {@code call}.
  *
+ * 一个可以返回结果的任务
+ *
  * <p>The {@code Callable} interface is similar to {@link
  * java.lang.Runnable}, in that both are designed for classes whose
  * instances are potentially executed by another thread.  A

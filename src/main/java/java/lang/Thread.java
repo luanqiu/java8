@@ -54,22 +54,33 @@ import sun.security.util.SecurityConstants;
  * thread has its priority initially set equal to the priority of the
  * creating thread, and is a daemon thread if and only if the
  * creating thread is a daemon.
+ *
+ * 每个线程都有优先级，高优先级的线程可能会优先执行
+ * 父线程创建子线程后，父子线程的优先级和是否是守护线程都是一致的
+ *
  * <p>
  * When a Java Virtual Machine starts up, there is usually a single
  * non-daemon thread (which typically calls the method named
  * <code>main</code> of some designated class). The Java Virtual
  * Machine continues to execute threads until either of the following
  * occurs:
+ * jvm 启动时，通常都启动 main 非守护线程，发生一下两个任意一个时，就会停止
  * <ul>
- * <li>The <code>exit</code> method of class <code>Runtime</code> has been
+ * <li>The exit method of class Runtime has been
  *     called and the security manager has permitted the exit operation
  *     to take place.
+ *     类退出方法被调用，并且安全机制允许这么做
  * <li>All threads that are not daemon threads have died, either by
  *     returning from the call to the <code>run</code> method or by
  *     throwing an exception that propagates beyond the <code>run</code>
  *     method.
+ *     所有非守护线程都消亡。
+ *     或者从运行的方法正常返回，或者运行的方法抛出了异常
  * </ul>
  * <p>
+ * 有两种创建线程的方式：
+ * 第一种：继承 Thread，成为 Thread 的子类。
+ * 第二种：实现 Runnable 接口，作为 Thread 的入参。
  * There are two ways to create a new thread of execution. One is to
  * declare a class to be a subclass of <code>Thread</code>. This
  * subclass should override the <code>run</code> method of class
@@ -122,6 +133,7 @@ import sun.security.util.SecurityConstants;
  *     new Thread(p).start();
  * </pre></blockquote>
  * <p>
+ * 每个线程都有名字，多个线程可能具有相同的名字，如果创建时没有指定名字，会自动生成一个名字
  * Every thread has a name for identification purposes. More than
  * one thread may have the same name. If a name is not specified when
  * a thread is created, a new name is generated for it.
@@ -146,7 +158,9 @@ class Thread implements Runnable {
     }
 
     private volatile char  name[];
+    // 优先级
     private int            priority;
+    //
     private Thread         threadQ;
     private long           eetop;
 
@@ -154,6 +168,8 @@ class Thread implements Runnable {
     private boolean     single_step;
 
     /* Whether or not the thread is a daemon thread. */
+    // 是否是守护线程，true 是守护线程
+    // 如果是守护线程的话，是不能够阻止 JVM 的退出的，级别很低
     private boolean     daemon = false;
 
     /* JVM state */
@@ -172,6 +188,7 @@ class Thread implements Runnable {
     private AccessControlContext inheritedAccessControlContext;
 
     /* For autonumbering anonymous threads. */
+    // 给线程自动生成名称所用
     private static int threadInitNumber;
     private static synchronized int nextThreadNum() {
         return threadInitNumber++;
@@ -179,12 +196,14 @@ class Thread implements Runnable {
 
     /* ThreadLocal values pertaining to this thread. This map is maintained
      * by the ThreadLocal class. */
+    // threadLocals 是线程的一个属性，所以我们才说在多线程环境下 threadLocals 是线程安全的
     ThreadLocal.ThreadLocalMap threadLocals = null;
 
     /*
      * InheritableThreadLocal values pertaining to this thread. This map is
      * maintained by the InheritableThreadLocal class.
      */
+    // inheritableThreadLocals 的意思是，当创建子线程时，子线程可以得到父线程的 ThreadLocal
     ThreadLocal.ThreadLocalMap inheritableThreadLocals = null;
 
     /*
@@ -210,10 +229,9 @@ class Thread implements Runnable {
     /* Java thread status for tools,
      * initialized to indicate thread 'not yet started'
      */
-
     private volatile int threadStatus = 0;
 
-
+    // 同一时刻只会有一个线程修改 threadSeqNumber 的值，线程安全
     private static synchronized long nextThreadID() {
         return ++threadSeqNumber;
     }
@@ -241,19 +259,14 @@ class Thread implements Runnable {
         }
     }
 
-    /**
-     * The minimum priority that a thread can have.
-     */
+
+    // 最低优先级
     public final static int MIN_PRIORITY = 1;
 
-   /**
-     * The default priority that is assigned to a thread.
-     */
+    // 普通优先级，也是默认的
     public final static int NORM_PRIORITY = 5;
 
-    /**
-     * The maximum priority that a thread can have.
-     */
+    // 最大优先级
     public final static int MAX_PRIORITY = 10;
 
     /**
@@ -261,6 +274,7 @@ class Thread implements Runnable {
      *
      * @return  the currently executing thread.
      */
+    // 返回当前线程的引用
     public static native Thread currentThread();
 
     /**
@@ -279,6 +293,8 @@ class Thread implements Runnable {
      * concurrency control constructs such as the ones in the
      * {@link java.util.concurrent.locks} package.
      */
+    // 当前线程做出让步，放弃当前 cpu，让线程重新选择 cpu，避免线程过度使用 cpu
+    // 让步不是不执行，也有可能重新选中自己
     public static native void yield();
 
     /**
@@ -298,6 +314,8 @@ class Thread implements Runnable {
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
      */
+    // 沉睡，锁不会释放
+    // 在 millis 毫秒之后会自己醒来
     public static native void sleep(long millis) throws InterruptedException;
 
     /**
@@ -322,6 +340,7 @@ class Thread implements Runnable {
      *          <i>interrupted status</i> of the current thread is
      *          cleared when this exception is thrown.
      */
+    // 1 millis(毫秒) = 1000000 nanos(纳秒)
     public static void sleep(long millis, int nanos)
     throws InterruptedException {
         if (millis < 0) {
@@ -332,7 +351,7 @@ class Thread implements Runnable {
             throw new IllegalArgumentException(
                                 "nanosecond timeout value out of range");
         }
-
+        // 纳秒大于 0.5 毫秒，算一个毫秒
         if (nanos >= 500000 || (nanos != 0 && millis == 0)) {
             millis++;
         }
@@ -360,6 +379,9 @@ class Thread implements Runnable {
      * @param acc the AccessControlContext to inherit, or
      *            AccessController.getContext() if null
      */
+    // g 代表线程组，线程组可以对组内的线程进行批量的操作，比如批量的打断 interrupt
+    // target 是我们要运行的对象
+    // stackSize 可以设置堆栈的大小
     private void init(ThreadGroup g, Runnable target, String name,
                       long stackSize, AccessControlContext acc) {
         if (name == null) {
@@ -367,8 +389,10 @@ class Thread implements Runnable {
         }
 
         this.name = name.toCharArray();
-
+        // 当前线程作为父线程
         Thread parent = currentThread();
+        // 如果安全管理器不为空，从安全管理器中拿线程组
+        // 否则继承父线程的线程组
         SecurityManager security = System.getSecurityManager();
         if (g == null) {
             /* Determine if it's an applet or not */
@@ -402,8 +426,11 @@ class Thread implements Runnable {
         g.addUnstarted();
 
         this.group = g;
+        // 子线程会继承父线程的守护属性
         this.daemon = parent.isDaemon();
+        // 子线程继承父线程的优先级属性
         this.priority = parent.getPriority();
+        // classLoader
         if (security == null || isCCLOverridden(parent.getClass()))
             this.contextClassLoader = parent.getContextClassLoader();
         else
@@ -412,6 +439,8 @@ class Thread implements Runnable {
                 acc != null ? acc : AccessController.getContext();
         this.target = target;
         setPriority(priority);
+        // 当父线程的 inheritableThreadLocals 的值不为空时
+        // 会把 inheritableThreadLocals 里面的值全部传递给子线程
         if (parent.inheritableThreadLocals != null)
             this.inheritableThreadLocals =
                 ThreadLocal.createInheritedMap(parent.inheritableThreadLocals);
@@ -419,6 +448,7 @@ class Thread implements Runnable {
         this.stackSize = stackSize;
 
         /* Set thread ID */
+        // 线程 id 自增
         tid = nextThreadID();
     }
 
@@ -457,6 +487,7 @@ class Thread implements Runnable {
      *         is started. If {@code null}, this classes {@code run} method does
      *         nothing.
      */
+    // 名称的初始化
     public Thread(Runnable target) {
         init(null, target, "Thread-" + nextThreadNum(), 0);
     }
@@ -693,6 +724,7 @@ class Thread implements Runnable {
      * @see        #run()
      * @see        #stop()
      */
+    // 该方法可以创建一个新的线程出来，返回的仍然是主线程
     public synchronized void start() {
         /**
          * This method is not invoked for the main method thread or "system"
@@ -701,6 +733,7 @@ class Thread implements Runnable {
          *
          * A zero status value corresponds to state "NEW".
          */
+        // 如果没有初始化，抛异常
         if (threadStatus != 0)
             throw new IllegalThreadStateException();
 
@@ -708,16 +741,21 @@ class Thread implements Runnable {
          * so that it can be added to the group's list of threads
          * and the group's unstarted count can be decremented. */
         group.add(this);
-
+        // started 是个标识符，我们在初始化一些东西的时候，经常这么写
         boolean started = false;
         try {
+            // 这里会创建一个新的线程，执行完成之后，新的线程已经在运行了，既 target 的内容已经在运行了
             start0();
+            // 这里执行的还是主线程
             started = true;
         } finally {
             try {
+                // 如果失败，把线程从线程组中删除
                 if (!started) {
                     group.threadStartFailed(this);
                 }
+             // 这里的 catch 捕捉也是值得我们学习的，我们在工作中 catch 时也应该多用 Throwable，少用 exception
+             // 比如对于异步线程抛出来的异常，Exception 是捕捉不住的，Throwable 却可以
             } catch (Throwable ignore) {
                 /* do nothing. If start0 threw a Throwable then
                   it will be passed up the call stack */
@@ -740,6 +778,7 @@ class Thread implements Runnable {
      * @see     #Thread(ThreadGroup, Runnable, String)
      */
     @Override
+    // 简单的运行，不会新起线程
     public void run() {
         if (target != null) {
             target.run();
@@ -877,6 +916,7 @@ class Thread implements Runnable {
      * of this thread is invoked, which may cause a {@link
      * SecurityException} to be thrown.
      *
+     * 如果线程因为 wait 等方法被阻塞，该方法可以打断该状态，并抛 InterruptedException 异常
      * <p> If this thread is blocked in an invocation of the {@link
      * Object#wait() wait()}, {@link Object#wait(long) wait(long)}, or {@link
      * Object#wait(long, int) wait(long, int)} methods of the {@link Object}
@@ -885,6 +925,8 @@ class Thread implements Runnable {
      * methods of this class, then its interrupt status will be cleared and it
      * will receive an {@link InterruptedException}.
      *
+     *
+     * 如果因为 I/O 操作被阻塞，连接会被关闭，线程状态被打断，并抛 ClosedByInterruptException 异常
      * <p> If this thread is blocked in an I/O operation upon an {@link
      * java.nio.channels.InterruptibleChannel InterruptibleChannel}
      * then the channel will be closed, the thread's interrupt
@@ -897,8 +939,7 @@ class Thread implements Runnable {
      * value, just as if the selector's {@link
      * java.nio.channels.Selector#wakeup wakeup} method were invoked.
      *
-     * <p> If none of the previous conditions hold then this thread's interrupt
-     * status will be set. </p>
+     * <p> If none of the previous conditions hold then this thread's interrupt status will be set. </p>
      *
      * <p> Interrupting a thread that is not alive need not have any effect.
      *
@@ -1241,7 +1282,11 @@ class Thread implements Runnable {
         }
 
         if (millis == 0) {
+            // 其他线程好了之后，当前线程的状态是 TERMINATED,isAlive 返回 false
+            // NEW false
+            // RUNNABLE true
             while (isAlive()) {
+                // 等待其他线程,一直等待
                 wait(0);
             }
         } else {
@@ -1250,6 +1295,7 @@ class Thread implements Runnable {
                 if (delay <= 0) {
                     break;
                 }
+                // 等待一定的时间，如果在 delay 时间内，等待的线程仍没有结束，放弃等待
                 wait(delay);
                 now = System.currentTimeMillis() - base;
             }
@@ -1736,6 +1782,7 @@ class Thread implements Runnable {
         /**
          * Thread state for a thread which has not yet started.
          */
+        // 线程还没有启动
         NEW,
 
         /**
@@ -1744,6 +1791,7 @@ class Thread implements Runnable {
          * be waiting for other resources from the operating system
          * such as processor.
          */
+        // 运行中的线程
         RUNNABLE,
 
         /**
@@ -1753,6 +1801,9 @@ class Thread implements Runnable {
          * reenter a synchronized block/method after calling
          * {@link Object#wait() Object.wait}.
          */
+        // 阻塞的，可能是在等待进入同步块/方法时被阻塞的
+        // 和 WAITING 不同在于， BLOCKED 是还没有进入同步块/方法时被阻塞，WAITING 是已经进去到获取同步块的
+        // 过程中了，但却获取不到锁
         BLOCKED,
 
         /**
@@ -1774,6 +1825,10 @@ class Thread implements Runnable {
          * that object. A thread that has called <tt>Thread.join()</tt>
          * is waiting for a specified thread to terminate.
          */
+        // 等待，遇到 Object#wait()、Thread.join、LockSupport#park() 这些方法时，线程就会等待
+        // 等待另外一个线程执行特定的操作
+        // 一个线程 Object.wait() 后，需要等待另外一个线程执行同一个 Object 的 notify().
+        // 或者线程执行 thread1.join()，等待 thread1 来打断。
         WAITING,
 
         /**
@@ -1788,12 +1843,14 @@ class Thread implements Runnable {
          *   <li>{@link LockSupport#parkUntil LockSupport.parkUntil}</li>
          * </ul>
          */
+        // 等待一定的时间
         TIMED_WAITING,
 
         /**
          * Thread state for a terminated thread.
          * The thread has completed execution.
          */
+        // 终止线程
         TERMINATED;
     }
 
@@ -1894,7 +1951,6 @@ class Thread implements Runnable {
                 new RuntimePermission("setDefaultUncaughtExceptionHandler")
                     );
         }
-
          defaultUncaughtExceptionHandler = eh;
      }
 

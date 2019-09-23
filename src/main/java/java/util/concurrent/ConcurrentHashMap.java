@@ -1589,9 +1589,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                 if ((ek = e.key) == key || (ek != null && key.equals(ek)))
                     return e.val;
             }
-            //如果是红黑树，使用红黑树的find方法
-            //如果当前节点持有 WAITER|WRITER 锁的话，是不能得到的，
-            //必须加上读锁，才能够去红黑树中查找
+            //如果是红黑树或者转移节点，使用对应的find方法
             else if (eh < 0)
                 return (p = e.find(h, key)) != null ? p.val : null;
             //如果是链表，遍历查找

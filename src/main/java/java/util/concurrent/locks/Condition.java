@@ -38,6 +38,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.Date;
 
 /**
+ * 当 lock 代替 synchronized 来加锁时，Condition 就可以用来代替 Object 响应的监控方法了，比如
+ * Object#wait()、Object#notify、Object#notifyAll 等等
  * {@code Condition} factors out the {@code Object} monitor
  * methods ({@link Object#wait() wait}, {@link Object#notify notify}
  * and {@link Object#notifyAll notifyAll}) into distinct objects to
@@ -47,6 +49,7 @@ import java.util.Date;
  * and statements, a {@code Condition} replaces the use of the Object
  * monitor methods.
  *
+ * 条件队列提供了一种方式：一个线程暂停执行，直到被适当的线程唤醒，这是一种和条件有关联的锁
  * <p>Conditions (also known as <em>condition queues</em> or
  * <em>condition variables</em>) provide a means for one thread to
  * suspend execution (to &quot;wait&quot;) until notified by another
@@ -57,10 +60,17 @@ import java.util.Date;
  * is that it <em>atomically</em> releases the associated lock and
  * suspends the current thread, just like {@code Object.wait}.
  *
+ * Condition 实例是绑定在锁上的，通过 Lock#newCondition 方法可以产生实例
  * <p>A {@code Condition} instance is intrinsically bound to a lock.
  * To obtain a {@code Condition} instance for a particular {@link Lock}
  * instance use its {@link Lock#newCondition newCondition()} method.
  *
+ * 举个例子，假设我们有一个有界边界的队列，支持 put 和 take 方法。
+ * 如果试图往空队列中执行 take，将会阻塞，直到队列中有可用的元素为止；
+ * 如果试图往满队里中执行 put，将会阻塞，直到队列中有空闲的位置为止。
+ *
+ * take 和 put 两种操作如果只有一个队列，那么每次只能执行一种操作，
+ * 所以我们可以分别新建队列，这样就可以分别执行操作了。
  * <p>As an example, suppose we have a bounded buffer which supports
  * {@code put} and {@code take} methods.  If a
  * {@code take} is attempted on an empty buffer, then the thread will block
@@ -115,6 +125,7 @@ import java.util.Date;
  * this functionality, so there is no reason to implement this
  * sample usage class.)
  *
+ * Condition 提供了明确的语义和行为，这点和 Object 监控方法不同
  * <p>A {@code Condition} implementation can provide behavior and semantics
  * that is
  * different from that of the {@code Object} monitor methods, such as
@@ -134,9 +145,11 @@ import java.util.Date;
  * It is recommended that to avoid confusion you never use {@code Condition}
  * instances in this way, except perhaps within their own implementation.
  *
+ * 除了特殊说明外，任意空值作为方法的入参，都会抛出空指针
  * <p>Except where noted, passing a {@code null} value for any parameter
  * will result in a {@link NullPointerException} being thrown.
  *
+ * 实现的注意事项
  * <h3>Implementation Considerations</h3>
  *
  * <p>When waiting upon a {@code Condition}, a &quot;<em>spurious
@@ -149,6 +162,7 @@ import java.util.Date;
  * recommended that applications programmers always assume that they can
  * occur and so always wait in a loop.
  *
+ * 三种形式的等待形式：可中断、不可中断、定时
  * <p>The three forms of condition waiting
  * (interruptible, non-interruptible, and timed) may differ in their ease of
  * implementation on some platforms and in their performance characteristics.
@@ -179,9 +193,15 @@ import java.util.Date;
 public interface Condition {
 
     /**
+     * 使当前线程一直等待，直到被 signalled 或被打断
      * Causes the current thread to wait until it is signalled or
      * {@linkplain Thread#interrupt interrupted}.
      *
+     * 当以下四种情况发生时，条件队列中的线程将被唤醒
+     * 1. 有线程使用了 signal 方法，正好唤醒了条件队列中的线程。
+     * 2. 有线程使用了 signalAll 方法。
+     * 3. 其他线程打断了当前线程，并且当前线程支持被打断。
+     * 4. 被虚假唤醒(即使没有满足以上 3 个条件，wait 也是可能被偶尔唤醒，see https://en.wikipedia.org/wiki/Spurious_wakeup)
      * <p>The lock associated with this {@code Condition} is atomically
      * released and the current thread becomes disabled for thread scheduling
      * purposes and lies dormant until <em>one</em> of four things happens:
@@ -196,6 +216,7 @@ public interface Condition {
      * <li>A &quot;<em>spurious wakeup</em>&quot; occurs.
      * </ul>
      *
+     * 在所有的用例中，线程从条件队列中苏醒时，必须重新获得锁
      * <p>In all cases, before this method can return the current thread must
      * re-acquire the lock associated with this condition. When the
      * thread returns it is <em>guaranteed</em> to hold this lock.
@@ -228,9 +249,11 @@ public interface Condition {
      * @throws InterruptedException if the current thread is interrupted
      *         (and interruption of thread suspension is supported)
      */
+    // 如果线程被打断，抛 InterruptedException 异常
     void await() throws InterruptedException;
 
     /**
+     * 使线程等待，直到被唤醒
      * Causes the current thread to wait until it is signalled.
      *
      * <p>The lock associated with this condition is atomically
@@ -264,6 +287,7 @@ public interface Condition {
      * thrown (such as {@link IllegalMonitorStateException}) and the
      * implementation must document that fact.
      */
+    // 和 wait 方法比较，不能被打断，其余一样
     void awaitUninterruptibly();
 
     /**
@@ -281,7 +305,7 @@ public interface Condition {
      * {@code Condition}; or
      * <li>Some other thread {@linkplain Thread#interrupt interrupts} the
      * current thread, and interruption of thread suspension is supported; or
-     * <li>The specified waiting time elapses; or
+     * <li>The specified waiting time elapses; or// 多了一个，指定的等待时间已经过了
      * <li>A &quot;<em>spurious wakeup</em>&quot; occurs.
      * </ul>
      *
@@ -300,10 +324,12 @@ public interface Condition {
      * case, whether or not the test for interruption occurs before the lock
      * is released.
      *
+     *  返回剩余的给定等待时间，如果返回的时间小于等于 0 ，说明等待时间过了
      * <p>The method returns an estimate of the number of nanoseconds
      * remaining to wait given the supplied {@code nanosTimeout}
      * value upon return, or a value less than or equal to zero if it
-     * timed out. This value can be used to determine whether and how
+     * timed out.
+     * This value can be used to determine whether and how
      * long to re-wait in cases where the wait returns but an awaited
      * condition still does not hold. Typical uses of this method take
      * the following form:
@@ -355,6 +381,8 @@ public interface Condition {
      * @throws InterruptedException if the current thread is interrupted
      *         (and interruption of thread suspension is supported)
      */
+    // 返回的 long 值表示剩余的给定等待时间，如果返回的时间小于等于 0 ，说明等待时间过了
+    // 选择纳秒是为了避免计算剩余等待时间时的截断误差
     long awaitNanos(long nanosTimeout) throws InterruptedException;
 
     /**
@@ -370,6 +398,7 @@ public interface Condition {
      * @throws InterruptedException if the current thread is interrupted
      *         (and interruption of thread suspension is supported)
      */
+    // 虽然入参可以是任意的时间，但底层仍然转化成纳秒
     boolean await(long time, TimeUnit unit) throws InterruptedException;
 
     /**
@@ -447,9 +476,11 @@ public interface Condition {
      * @throws InterruptedException if the current thread is interrupted
      *         (and interruption of thread suspension is supported)
      */
+    // 返回值表示目前为止，指定日期是否到期，true 表示没有过期，false 表示过期了
     boolean awaitUntil(Date deadline) throws InterruptedException;
 
     /**
+     * 唤醒一个等待的线程
      * Wakes up one waiting thread.
      *
      * <p>If any threads are waiting on this condition then one
@@ -465,6 +496,7 @@ public interface Condition {
      * not held. Typically, an exception such as {@link
      * IllegalMonitorStateException} will be thrown.
      */
+    // 唤醒一个等待的线程，在被唤醒前必须先获得锁
     void signal();
 
     /**
@@ -483,5 +515,6 @@ public interface Condition {
      * not held. Typically, an exception such as {@link
      * IllegalMonitorStateException} will be thrown.
      */
+    // 唤醒条件队列中的所有线程
     void signalAll();
 }

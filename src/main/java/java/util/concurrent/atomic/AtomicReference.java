@@ -195,9 +195,14 @@ public class AtomicReference<V> implements java.io.Serializable {
      * @return the previous value
      * @since 1.8
      */
+    // 对 x 执行 accumulatorFunction 操作
+    // accumulatorFunction 是个函数，可以自定义想做的事情
+    // 返回老值
     public final V getAndAccumulate(V x,
                                     BinaryOperator<V> accumulatorFunction) {
+        // prev 是老值，next 是新值
         V prev, next;
+        // 自旋 + CAS 保证一定可以替换老值
         do {
             prev = get();
             next = accumulatorFunction.apply(prev, x);
