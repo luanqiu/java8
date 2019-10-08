@@ -614,6 +614,7 @@ public class Executors {
             Thread t = new Thread(group, r,
                                   namePrefix + threadNumber.getAndIncrement(),
                                   0);
+            // 默认非守护线程，线程优先级是 Thread.NORM_PRIORITY
             if (t.isDaemon())
                 t.setDaemon(false);
             if (t.getPriority() != Thread.NORM_PRIORITY)
@@ -641,6 +642,7 @@ public class Executors {
                 // Fail fast
                 sm.checkPermission(new RuntimePermission("setContextClassLoader"));
             }
+
             this.acc = AccessController.getContext();
             this.ccl = Thread.currentThread().getContextClassLoader();
         }

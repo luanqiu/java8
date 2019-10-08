@@ -83,6 +83,9 @@ public abstract class AbstractExecutorService implements ExecutorService {
      * the underlying task
      * @since 1.6
      */
+    // 把 Runnable 转化成 RunnableFuture
+    // RunnableFuture 是一个接口，实现了 Runnable 和 Future
+    // FutureTask 是 RunnableFuture 的实现类，主要是对任务进行各种管理
     protected <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         return new FutureTask<T>(runnable, value);
     }

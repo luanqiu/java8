@@ -36,10 +36,15 @@
 package java.util.concurrent;
 
 /**
- * An object that executes submitted {@link Runnable} tasks. This
- * interface provides a way of decoupling task submission from the
- * mechanics of how each task will be run, including details of thread
- * use, scheduling, etc.  An {@code Executor} is normally used
+ * Executor 产生的原因
+ * callable 和 runnable 都是定义任务的
+ * Executor 是用来执行任务的。
+ *
+ * 提供了一种方式，让任务提交和运行解耦开。
+ *
+ * An object that executes submitted {@link Runnable} tasks.
+ * This interface provides a way of decoupling task submission from the mechanics of how each task will be run,
+ * including details of thread use, scheduling, etc.  An {@code Executor} is normally used
  * instead of explicitly creating threads. For example, rather than
  * invoking {@code new Thread(new(RunnableTask())).start()} for each
  * of a set of tasks, you might use:
