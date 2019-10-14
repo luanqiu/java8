@@ -159,13 +159,13 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     //take poll 时的锁
     private final ReentrantLock takeLock = new ReentrantLock();
 
-    // take的等待队列，condition 可以简单理解为基于ASQ同步机制建立的等待队列
+    // take的条件队列，condition 可以简单理解为基于ASQ同步机制建立的条件队列
     private final Condition notEmpty = takeLock.newCondition();
 
     // put offer 时的锁，设计两把锁的目的，主要为了 take 和 put 可以同时进行
     private final ReentrantLock putLock = new ReentrantLock();
 
-    // put的等待队列
+    // put的条件队列
     private final Condition notFull = putLock.newCondition();
     // 锁 end
 
@@ -295,14 +295,12 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
      */
     // 队头中取数据
     private E dequeue() {
-        // assert takeLock.isHeldByCurrentThread();
-        // assert head.item == null;
         Node<E> h = head;
         Node<E> first = h.next;
         h.next = h; // help GC
         head = first;
         E x = first.item;
-        first.item = null;
+        first.item = null;// 头节点指向 null，删除
         return x;
     }
 
@@ -635,8 +633,7 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
     /**
      * Removes a single instance of the specified element from this queue,
      * if it is present.  More formally, removes an element {@code e} such
-     * that {@code o.equals(e)}, if this queue contains one or more such
-     * elements.
+     * that {@code o.equals(e)}, if this queue contains one or more such elements.
      * Returns {@code true} if this queue contained the specified element
      * (or equivalently, if this queue changed as a result of the call).
      *

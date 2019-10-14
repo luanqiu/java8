@@ -170,8 +170,8 @@ public interface Stream<T> extends BaseStream<T, Stream<T>> {
     Stream<T> filter(Predicate<? super T> predicate);
 
     /**
-     * Returns a stream consisting(组成) of the results of applying the given
-     * function to the elements of this stream.
+     * Returns a stream consisting of the results of applying the given
+      function to the elements of this stream.
      *
      * <p>This is an <a href="package-summary.html#StreamOps">intermediate
      * operation</a>.
