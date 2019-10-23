@@ -196,14 +196,14 @@ class Thread implements Runnable {
 
     /* ThreadLocal values pertaining to this thread. This map is maintained
      * by the ThreadLocal class. */
-    // threadLocals 是线程的一个属性，所以我们才说在多线程环境下 threadLocals 是线程安全的
+    // ThreadLocal 的 ThreadLocalMap 是线程的一个属性，所以我们才说在多线程环境下 threadLocals 是线程安全的
     ThreadLocal.ThreadLocalMap threadLocals = null;
 
     /*
      * InheritableThreadLocal values pertaining to this thread. This map is
      * maintained by the InheritableThreadLocal class.
      */
-    // inheritableThreadLocals 的意思是，当创建子线程时，子线程可以得到父线程的 ThreadLocal
+    // 当创建子线程时，子线程可以得到父线程的 inheritableThreadLocals
     ThreadLocal.ThreadLocalMap inheritableThreadLocals = null;
 
     /*

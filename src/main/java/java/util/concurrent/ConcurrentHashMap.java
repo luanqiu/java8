@@ -1373,7 +1373,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
 
     /**
      * Returns a power of two table size for the given desired capacity.
-     * See Hackers Delight, sec 3.2
+      See Hackers Delight, sec 3.2
      */
     private static final int tableSizeFor(int c) {
         int n = c - 1;
@@ -1469,9 +1469,8 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
     }
 
     /**
-     * Creates a new, empty map with an initial table size
-     * accommodating the specified number of elements without the need
-     * to dynamically resize.
+     * Creates a new, empty map with an initial table size accommodating the specified number of elements without the need
+      to dynamically resize.
      *
      * @param initialCapacity The implementation performs internal
      * sizing to accommodate this many elements.
@@ -2916,8 +2915,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                     if (U.compareAndSwapInt(this, SIZECTL, sc, sc + 1))
                         transfer(tab, nt);
                 }
-                else if (U.compareAndSwapInt(this, SIZECTL, sc,
-                                             (rs << RESIZE_STAMP_SHIFT) + 2))
+                else if (U.compareAndSwapInt(this, SIZECTL, sc, (rs << RESIZE_STAMP_SHIFT) + 2))
                     transfer(tab, null);
                 s = sumCount();
             }
@@ -3058,6 +3056,7 @@ public class ConcurrentHashMap<K,V> extends AbstractMap<K,V>
                     sizeCtl = (n << 1) - (n >>> 1);
                     return;
                 }
+
                 if (U.compareAndSwapInt(this, SIZECTL, sc = sizeCtl, sc - 1)) {
                     if ((sc - 2) != resizeStamp(n) << RESIZE_STAMP_SHIFT)
                         return;

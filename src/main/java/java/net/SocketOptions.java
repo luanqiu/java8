@@ -129,9 +129,8 @@ public interface SocketOptions {
      */
 
     /**
-     * Disable Nagle's algorithm for this connection.  Written data
-     * to the network is not buffered pending acknowledgement of
-     * previously written data.
+     * Disable Nagle's algorithm for this connection.
+     * Written data to the network is not buffered pending acknowledgement of previously written data.
      *<P>
      * Valid for TCP only: SocketImpl.
      *

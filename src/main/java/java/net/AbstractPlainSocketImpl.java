@@ -91,9 +91,12 @@ abstract class AbstractPlainSocketImpl extends SocketImpl
      * Creates a socket with a boolean that specifies whether this
      * is a stream socket (true) or an unconnected UDP socket (false).
      */
+    // 创建套接字
     protected synchronized void create(boolean stream) throws IOException {
         this.stream = stream;
+        // 创建 UDP 套接字
         if (!stream) {
+            // 不能同事超过 25 个 UDP 套接字
             ResourceManager.beforeUdpCreate();
             // only create the fd after we know we will be able to create the socket
             fd = new FileDescriptor();
@@ -104,8 +107,10 @@ abstract class AbstractPlainSocketImpl extends SocketImpl
                 fd = null;
                 throw ioe;
             }
+        // 创建 TCP 套接字
         } else {
             fd = new FileDescriptor();
+            // native 方法
             socketCreate(true);
         }
         if (socket != null)

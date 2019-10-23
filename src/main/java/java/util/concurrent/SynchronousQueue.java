@@ -307,7 +307,7 @@ public class SynchronousQueue<E> extends AbstractQueue<E>
             int mode = (e == null) ? REQUEST : DATA;
             //自旋
             for (;;) {
-                // 拿出头节点，有集中情况
+                // 拿出头节点，有几种情况
                 // 1：头节点为空，说明队列中还没有数据
                 // 2：头节点不为空，并且是 take 类型的，说明有线程正等着拿数据。
                 // 3：头节点不为空，并且是 put 类型的，说明有线程正等着放数据。

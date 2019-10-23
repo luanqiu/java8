@@ -4,7 +4,7 @@
  *
  *
  *
- *
+ *1
  *
  *
  *
@@ -469,7 +469,6 @@ class ServerSocket implements java.io.Closeable {
      * @see SecurityManager#checkConnect
      * @since 1.4
      */
-
     public SocketAddress getLocalSocketAddress() {
         if (!isBound())
             return null;

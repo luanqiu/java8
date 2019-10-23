@@ -34,15 +34,15 @@ import java.security.PrivilegedExceptionAction;
 import java.security.PrivilegedAction;
 
 /**
+ * 套接字是两台机器之间通信的端点
  * This class implements client sockets (also called just
- * "sockets"). A socket is an endpoint for communication
- * between two machines.
+ * "sockets"). A socket is an endpoint for communication between two machines.
  * <p>
+ * 实际的工作由 SocketImpl 来完成的
  * The actual work of the socket is performed by an instance of the
- * {@code SocketImpl} class. An application, by changing
- * the socket factory that creates the socket implementation,
- * can configure itself to create sockets appropriate to the local
- * firewall.
+ * {@code SocketImpl} class.
+ * An application, by changing the socket factory that creates the socket implementation,
+ * can configure itself to create sockets appropriate to the local firewall.
  *
  * @author  unascribed
  * @see     java.net.Socket#setSocketImplFactory(java.net.SocketImplFactory)
@@ -55,10 +55,11 @@ class Socket implements java.io.Closeable {
     /**
      * Various states of this socket.
      */
-    private boolean created = false;
-    private boolean bound = false;
-    private boolean connected = false;
-    private boolean closed = false;
+    // 套接字的状态
+    private boolean created = false;// 已创建
+    private boolean bound = false;// 已绑定
+    private boolean connected = false;// 已连接
+    private boolean closed = false;// 已关闭
     private Object closeLock = new Object();
     private boolean shutIn = false;
     private boolean shutOut = false;
@@ -66,6 +67,7 @@ class Socket implements java.io.Closeable {
     /**
      * The implementation of this Socket.
      */
+    // 套接字的实现
     SocketImpl impl;
 
     /**
@@ -74,15 +76,34 @@ class Socket implements java.io.Closeable {
     private boolean oldImpl = false;
 
     /**
-     * Creates an unconnected socket, with the
-     * system-default type of SocketImpl.
+     * Creates an unconnected socket, with the system-default type of SocketImpl.
      *
      * @since   JDK1.1
      * @revised 1.4
      */
+    // 创建默认的套接字(SocksSocketImpl)
     public Socket() {
         setImpl();
     }
+
+    /**
+     * Sets impl to the system-default type of SocketImpl.
+     * @since 1.4
+     */
+    void setImpl() {
+        // 如果工厂不为空，使用工厂创建，工厂可以自定义，并通过 setSocketImplFactory 方法初始化
+        if (factory != null) {
+            impl = factory.createSocketImpl();
+            checkOldImpl();
+        // 默认就是 SocksSocketImpl
+        } else {
+            // No need to do a checkOldImpl() here, we know it's an up to date SocketImpl!
+            impl = new SocksSocketImpl();
+        }
+        if (impl != null)
+            impl.setSocket(this);
+    }
+
 
     /**
      * Creates an unconnected socket, specifying the type of proxy, if any,
@@ -240,6 +261,8 @@ class Socket implements java.io.Closeable {
      * @see        java.net.SocketImplFactory#createSocketImpl()
      * @see        SecurityManager#checkConnect
      */
+    // address 代表IP地址，port 表示套接字的端口
+    // address 我们一般使用 InetSocketAddress，InetSocketAddress 有 ip+port、域名+port、InetAddress 等初始化方式
     public Socket(InetAddress address, int port) throws IOException {
         this(address != null ? new InetSocketAddress(address, port) : null,
              (SocketAddress) null, true);
@@ -398,8 +421,7 @@ class Socket implements java.io.Closeable {
      *
      * @param      host     the IP address.
      * @param      port      the port number.
-     * @param      stream    if {@code true}, create a stream socket;
-     *                       otherwise, create a datagram socket.
+     * @param      stream    if {@code true}, create a stream socket; otherwise, create a datagram socket.
      * @exception  IOException  if an I/O error occurs when creating the socket.
      * @exception  SecurityException  if a security manager exists and its
      *             {@code checkConnect} method doesn't allow the operation.
@@ -419,6 +441,8 @@ class Socket implements java.io.Closeable {
              new InetSocketAddress(0), stream);
     }
 
+    // stream 为 true 时，表示为stream socket 流套接字，使用 TCP 协议，比较稳定可靠，但占用资源多
+    // stream 为 false 时，表示为datagram socket 数据报套接字，使用 UDP 协议，不稳定，但占用资源少
     private Socket(SocketAddress address, SocketAddress localAddr,
                    boolean stream) throws IOException {
         setImpl();
@@ -428,8 +452,11 @@ class Socket implements java.io.Closeable {
             throw new NullPointerException();
 
         try {
+            // 创建 socket
             createImpl(stream);
+            // 如果 ip 地址不为空，绑定地址
             if (localAddr != null)
+                // create、bind、connect 也是 native 方法
                 bind(localAddr);
             connect(address);
         } catch (IOException | IllegalArgumentException | SecurityException e) {
@@ -489,22 +516,6 @@ class Socket implements java.io.Closeable {
         });
     }
 
-    /**
-     * Sets impl to the system-default type of SocketImpl.
-     * @since 1.4
-     */
-    void setImpl() {
-        if (factory != null) {
-            impl = factory.createSocketImpl();
-            checkOldImpl();
-        } else {
-            // No need to do a checkOldImpl() here, we know it's an up to date
-            // SocketImpl!
-            impl = new SocksSocketImpl();
-        }
-        if (impl != null)
-            impl.setSocket(this);
-    }
 
 
     /**
@@ -555,6 +566,7 @@ class Socket implements java.io.Closeable {
      * @since 1.4
      * @spec JSR-51
      */
+    // 在制定的超时时间内，尝试连接到服务器，超时抛 SocketTimeoutException 异常
     public void connect(SocketAddress endpoint, int timeout) throws IOException {
         if (endpoint == null)
             throw new IllegalArgumentException("connect: The address can't be null");
@@ -603,10 +615,10 @@ class Socket implements java.io.Closeable {
     }
 
     /**
+     * 套接字绑定到本地地址
      * Binds the socket to a local address.
      * <P>
-     * If the address is {@code null}, then the system will pick up
-     * an ephemeral port and a valid local address to bind the socket.
+     * If the address is null, then the system will pick up an ephemeral port and a valid local address to bind the socket.
      *
      * @param   bindpoint the {@code SocketAddress} to bind to
      * @throws  IOException if the bind operation fails, or if the socket
@@ -620,6 +632,7 @@ class Socket implements java.io.Closeable {
      * @since   1.4
      * @see #isBound
      */
+    // 如果 bindpoint 为空，系统自动获取本地有效的地址进行绑定
     public void bind(SocketAddress bindpoint) throws IOException {
         if (isClosed())
             throw new SocketException("Socket is closed");
@@ -898,6 +911,7 @@ class Socket implements java.io.Closeable {
      * @revised 1.4
      * @spec JSR-51
      */
+    // 要从服务端接受数据，得到输入流
     public InputStream getInputStream() throws IOException {
         if (isClosed())
             throw new SocketException("Socket is closed");
@@ -938,6 +952,7 @@ class Socket implements java.io.Closeable {
      * @revised 1.4
      * @spec JSR-51
      */
+    // 要向服务端发送数据，得到输出流
     public OutputStream getOutputStream() throws IOException {
         if (isClosed())
             throw new SocketException("Socket is closed");
