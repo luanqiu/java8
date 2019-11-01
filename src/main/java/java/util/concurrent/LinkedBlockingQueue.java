@@ -295,12 +295,19 @@ public class LinkedBlockingQueue<E> extends AbstractQueue<E>
      */
     // 队头中取数据
     private E dequeue() {
+        // 取出头节点
         Node<E> h = head;
+        // 头节点的下一个节点为 first
         Node<E> first = h.next;
+        // 使 h 的下一个节点指向自己
         h.next = h; // help GC
+        // 给链表头赋值
         head = first;
+        // 取出链表头值
         E x = first.item;
-        first.item = null;// 头节点指向 null，删除
+        // 旧头节点指向 null，帮助 GC
+        first.item = null;
+        // 返回旧头节点值
         return x;
     }
 
