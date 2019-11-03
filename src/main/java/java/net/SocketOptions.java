@@ -129,6 +129,7 @@ public interface SocketOptions {
      */
 
     /**
+     * 此设置仅仅对 TCP 生效，主要为了禁止使用 Nagle 算法，true 表示禁止使用，false 表示使用，默认是 false
      * Disable Nagle's algorithm for this connection.
      * Written data to the network is not buffered pending acknowledgement of previously written data.
      *<P>
@@ -161,8 +162,9 @@ public interface SocketOptions {
 
     @Native public final static int SO_BINDADDR = 0x000F;
 
-    /** Sets SO_REUSEADDR for a socket.  This is used only for MulticastSockets
-     * in java, and it is set by default for MulticastSockets.
+    /**
+      Sets SO_REUSEADDR for a socket.  This is used only for MulticastSockets
+      in java, and it is set by default for MulticastSockets.
      * <P>
      * Valid for: DatagramSocketImpl
      */
@@ -214,22 +216,27 @@ public interface SocketOptions {
 
     /**
      * This option sets the type-of-service or traffic class field
-     * in the IP header for a TCP or UDP socket.
+      in the IP header for a TCP or UDP socket.
      * @since 1.4
      */
 
     @Native public final static int IP_TOS = 0x3;
 
     /**
-     * Specify a linger-on-close timeout.  This option disables/enables
-     * immediate return from a <B>close()</B> of a TCP Socket.  Enabling
-     * this option with a non-zero Integer <I>timeout</I> means that a
-     * <B>close()</B> will block pending the transmission and acknowledgement
-     * of all data written to the peer, at which point the socket is closed
-     * <I>gracefully</I>.  Upon reaching the linger timeout, the socket is
-     * closed <I>forcefully</I>, with a TCP RST. Enabling the option with a
-     * timeout of zero does a forceful close immediately. If the specified
-     * timeout value exceeds 65,535 it will be reduced to 65,535.
+     * TCP 延迟关闭时间
+     * Specify a linger-on-close timeout.
+     * 禁用此选项的话，close() 会立马返回
+     * 用此选项的话，close() 将被阻塞，等待向对方发送数据，如果时间到了，还未结束，发送 TCP RST 强制 TCP 关闭。
+     *
+     * This option disables/enables immediate return from a <B>close()</B> of a TCP Socket.
+     * Enabling this option with a non-zero Integer <I>timeout</I> means that a
+      close() will block pending the transmission and acknowledgement of all data written to the peer,
+     at which point the socket is closed <I>gracefully</I>  Upon reaching the linger timeout
+     * , the socket is closed <I>forcefully</I>, with a TCP RST.
+     * 超时时间为 0 ，会立即关闭
+     * Enabling the option with a timeout of zero does a forceful close immediately.
+     * 超过 65535 以 65535 算
+     * If the specified timeout value exceeds 65,535 it will be reduced to 65,535.
      * <P>
      * Valid only for TCP: SocketImpl
      *
@@ -238,19 +245,24 @@ public interface SocketOptions {
      */
     @Native public final static int SO_LINGER = 0x0080;
 
-    /** Set a timeout on blocking Socket operations:
+    /**
+     * 设置阻塞操作的超时时间
+     * Set a timeout on blocking Socket operations:
      * <PRE>
      * ServerSocket.accept();
      * SocketInputStream.read();
      * DatagramSocket.receive();
      * </PRE>
      *
-     * <P> The option must be set prior to entering a blocking
-     * operation to take effect.  If the timeout expires and the
-     * operation would continue to block,
-     * <B>java.io.InterruptedIOException</B> is raised.  The Socket is
-     * not closed in this case.
+     * 必须在阻塞操作之前设置该选项
+     * <P> The option must be set prior to entering a blocking operation to take effect.
+     * 如果时间到了，操作仍然在阻塞，会抛出 InterruptedIOException 异常（Socket 会抛出 SocketTimeoutException 异常，
+     * 不同的套接字抛出的异常可能不同）
+     * If the timeout expires and the operation would continue to block,
+     * <B>java.io.InterruptedIOException</B> is raised.
+     * The Socket is not closed in this case.
      *
+     * 适用于所有的套接字
      * <P> Valid for all sockets: SocketImpl, DatagramSocketImpl
      *
      * @see Socket#setSoTimeout
@@ -260,12 +272,13 @@ public interface SocketOptions {
     @Native public final static int SO_TIMEOUT = 0x1006;
 
     /**
-     * Set a hint the size of the underlying buffers used by the
-     * platform for outgoing network I/O. When used in set, this is a
-     * suggestion to the kernel from the application about the size of
-     * buffers to use for the data to be sent over the socket. When
-     * used in get, this must return the size of the buffer actually
-     * used by the platform when sending out data on this socket.
+     * 套接字发送数据时缓存区的大小
+     * Set a hint the size of the underlying buffers used by the platform for outgoing network I/O.
+     * When used in set, this is a
+     suggestion to the kernel from the application about the size of
+      buffers to use for the data to be sent over the socket.
+     When used in get, this must return the size of the buffer actually
+      used by the platform when sending out data on this socket.
      *
      * Valid for all sockets: SocketImpl, DatagramSocketImpl
      *
@@ -277,13 +290,13 @@ public interface SocketOptions {
     @Native public final static int SO_SNDBUF = 0x1001;
 
     /**
-     * Set a hint the size of the underlying buffers used by the
-     * platform for incoming network I/O. When used in set, this is a
-     * suggestion to the kernel from the application about the size of
-     * buffers to use for the data to be received over the
-     * socket. When used in get, this must return the size of the
-     * buffer actually used by the platform when receiving in data on
-     * this socket.
+      Set a hint the size of the underlying buffers used by the
+      platform for incoming network I/O. When used in set, this is a
+      suggestion to the kernel from the application about the size of
+      buffers to use for the data to be received over the
+      socket. When used in get, this must return the size of the
+      buffer actually used by the platform when receiving in data on
+      this socket.
      *
      * Valid for all sockets: SocketImpl, DatagramSocketImpl
      *
@@ -295,20 +308,26 @@ public interface SocketOptions {
     @Native public final static int SO_RCVBUF = 0x1002;
 
     /**
-     * When the keepalive option is set for a TCP socket and no data
-     * has been exchanged across the socket in either direction for
-     * 2 hours (NOTE: the actual value is implementation dependent),
-     * TCP automatically sends a keepalive probe to the peer. This probe is a
-     * TCP segment to which the peer must respond.
-     * One of three responses is expected:
-     * 1. The peer responds with the expected ACK. The application is not
-     *    notified (since everything is OK). TCP will send another probe
-     *    following another 2 hours of inactivity.
-     * 2. The peer responds with an RST, which tells the local TCP that
-     *    the peer host has crashed and rebooted. The socket is closed.
-     * 3. There is no response from the peer. The socket is closed.
-     *
-     * The purpose of this option is to detect if the peer host crashes.
+     * 如果设置属性为 true，并且两小时内套接字之间都没有信息交互时，
+      When the keepalive option is set for a TCP socket and no data
+      has been exchanged across the socket in either direction for
+      2 hours (NOTE: the actual value is implementation dependent),
+     TCP 会自动发送 keepalive 探测给服务端，对方必须响应这个探测
+      TCP automatically sends a keepalive probe to the peer. This probe is a
+      TCP segment to which the peer must respond.
+     预计会有三种反应：
+      One of three responses is expected:
+     服务端使用预期的 ACK 回复，说明一切正常。
+      1. The peer responds with the expected ACK. The application is not
+         notified (since everything is OK). TCP will send another probe
+         following another 2 hours of inactivity.
+     服务端回复 RST，表示服务端处于死机或者重启状态，终止连接
+      2. The peer responds with an RST, which tells the local TCP that
+         the peer host has crashed and rebooted. The socket is closed.
+     没有得到服务端的响应（会尝试多次），表示套接字已经关闭了
+      3. There is no response from the peer. The socket is closed.
+
+      The purpose of this option is to detect if the peer host crashes.
      *
      * Valid only for TCP socket: SocketImpl
      *
@@ -318,10 +337,9 @@ public interface SocketOptions {
     @Native public final static int SO_KEEPALIVE = 0x0008;
 
     /**
-     * When the OOBINLINE option is set, any TCP urgent data received on
-     * the socket will be received through the socket input stream.
-     * When the option is disabled (which is the default) urgent data
-     * is silently discarded.
+     * When the OOBINLINE option is set,
+     * any TCP urgent data received on the socket will be received through the socket input stream.
+     * When the option is disabled (which is the default) urgent data is silently discarded.
      *
      * @see Socket#setOOBInline
      * @see Socket#getOOBInline

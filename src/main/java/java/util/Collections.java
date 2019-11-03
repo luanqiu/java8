@@ -40,7 +40,7 @@ import java.util.stream.StreamSupport;
 
 /**
  * This class consists exclusively of static methods that operate on or return
- * collections.  It contains polymorphic algorithms that operate on
+  collections.  It contains polymorphic algorithms that operate on
  * collections, "wrappers", which return a new collection backed by a
  * specified collection, and a few other odds and ends.
  *

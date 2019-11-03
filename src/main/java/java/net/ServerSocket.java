@@ -32,9 +32,11 @@ import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
 
 /**
- * This class implements server sockets. A server socket waits for
- * requests to come in over the network. It performs some operation
- * based on that request, and then possibly returns a result to the requester.
+ *
+ * 等待客户端的套接字发送信息过来，并在处理完成之后，把响应回传给客户端
+  This class implements server sockets. A server socket waits for
+  requests to come in over the network. It performs some operation
+  based on that request, and then possibly returns a result to the requester.
  * <p>
  * The actual work of the server socket is performed by an instance
  * of the {@code SocketImpl} class. An application can
@@ -53,14 +55,12 @@ class ServerSocket implements java.io.Closeable {
     /**
      * Various states of this socket.
      */
-    private boolean created = false;
-    private boolean bound = false;
-    private boolean closed = false;
+    private boolean created = false;// 已创建
+    private boolean bound = false;// 绑定
+    private boolean closed = false;// 已关闭
     private Object closeLock = new Object();
 
-    /**
-     * The implementation of this Socket.
-     */
+    // 底层的功能都依靠 SocketImpl 来实现
     private SocketImpl impl;
 
     /**
@@ -131,15 +131,17 @@ class ServerSocket implements java.io.Closeable {
     /**
      * Creates a server socket and binds it to the specified local port
      * number, with the specified backlog.
+     * 如果 port 是 0 的话，表示 port 是自动分配
      * A port number of {@code 0} means that the port number is
      * automatically allocated, typically from an ephemeral port range.
      * This port number can then be retrieved by calling
-     * {@link #getLocalPort getLocalPort}.
+      {@link #getLocalPort getLocalPort}.
      * <p>
-     * The maximum queue length for incoming connection indications (a
-     * request to connect) is set to the {@code backlog} parameter. If
-     * a connection indication arrives when the queue is full, the
-     * connection is refused.
+     *   最大的客户端连接数是由 backlog 来控制的，如果要作为构造器入参传入的话，应该是大于 0 的
+      The maximum queue length for incoming connection indications (a
+      request to connect) is set to the {@code backlog} parameter. If
+      a connection indication arrives when the queue is full, the
+      connection is refused.
      * <p>
      * If the application has specified a server socket factory, that
      * factory's {@code createSocketImpl} method is called to create
@@ -151,18 +153,18 @@ class ServerSocket implements java.io.Closeable {
      * as its argument to ensure the operation is allowed.
      * This could result in a SecurityException.
      *
-     * The {@code backlog} argument is the requested maximum number of
-     * pending connections on the socket. Its exact semantics are implementation
-     * specific. In particular, an implementation may impose a maximum length
-     * or may choose to ignore the parameter altogther. The value provided
-     * should be greater than {@code 0}. If it is less than or equal to
-     * {@code 0}, then an implementation specific default will be used.
+      The {@code backlog} argument is the requested maximum number of
+      pending connections on the socket. Its exact semantics are implementation
+      specific. In particular, an implementation may impose a maximum length
+      or may choose to ignore the parameter altogther. The value provided
+      should be greater than {@code 0}. If it is less than or equal to
+      {@code 0}, then an implementation specific default will be used.
      * <P>
      *
      * @param      port     the port number, or {@code 0} to use a port
      *                      number that is automatically allocated.
      * @param      backlog  requested maximum length of the queue of incoming
-     *                      connections.
+                          connections.
      *
      * @exception  IOException  if an I/O error occurs when opening the socket.
      * @exception  SecurityException
@@ -227,13 +229,17 @@ class ServerSocket implements java.io.Closeable {
      * @since   JDK1.1
      */
     public ServerSocket(int port, int backlog, InetAddress bindAddr) throws IOException {
+        // 默认是 SocksSocketImpl 实现
         setImpl();
+        // 端口必须大于 0，小于 65535
         if (port < 0 || port > 0xFFFF)
             throw new IllegalArgumentException(
                        "Port value out of range: " + port);
+        // 最大可连接数如果小于1，那么采取默认的 50
         if (backlog < 1)
           backlog = 50;
         try {
+            // 底层 navtive 方法
             bind(new InetSocketAddress(bindAddr, port), backlog);
         } catch(SecurityException e) {
             close();
@@ -476,8 +482,9 @@ class ServerSocket implements java.io.Closeable {
     }
 
     /**
-     * Listens for a connection to be made to this socket and accepts
-     * it. The method blocks until a connection is made.
+     *
+      Listens for a connection to be made to this socket and accepts
+      it. The method blocks until a connection is made.
      *
      * <p>A new Socket {@code s} is created and, if there
      * is a security manager,

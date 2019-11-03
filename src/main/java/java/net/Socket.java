@@ -52,21 +52,17 @@ import java.security.PrivilegedAction;
  */
 public
 class Socket implements java.io.Closeable {
-    /**
-     * Various states of this socket.
-     */
+
+
     // 套接字的状态
     private boolean created = false;// 已创建
     private boolean bound = false;// 已绑定
     private boolean connected = false;// 已连接
     private boolean closed = false;// 已关闭
-    private Object closeLock = new Object();
-    private boolean shutIn = false;
-    private boolean shutOut = false;
+    private Object closeLock = new Object();// 关闭锁
+    private boolean shutIn = false;// 读是否关闭
+    private boolean shutOut = false;// 写是否关闭
 
-    /**
-     * The implementation of this Socket.
-     */
     // 套接字的实现
     SocketImpl impl;
 
@@ -107,7 +103,7 @@ class Socket implements java.io.Closeable {
 
     /**
      * Creates an unconnected socket, specifying the type of proxy, if any,
-     * that should be used regardless of any other settings.
+      that should be used regardless of any other settings.
      * <P>
      * If there is a security manager, its {@code checkConnect} method
      * is called with the proxy host address and port number
@@ -552,7 +548,7 @@ class Socket implements java.io.Closeable {
     /**
      * Connects this socket to the server with a specified timeout value.
      * A timeout of zero is interpreted as an infinite timeout. The connection
-     * will then block until established or an error occurs.
+     will then block until established or an error occurs.
      *
      * @param   endpoint the {@code SocketAddress}
      * @param   timeout  the timeout value to be used in milliseconds.
@@ -1026,11 +1022,17 @@ class Socket implements java.io.Closeable {
      * @since JDK1.1
      * @see #getSoLinger()
      */
+    // on 为 false，表示不启用延时关闭，true 的话表示启用延时关闭
+    // linger 为延时的时间，单位秒
     public void setSoLinger(boolean on, int linger) throws SocketException {
+        // 检查是否已经关闭
         if (isClosed())
             throw new SocketException("Socket is closed");
+        // 不启用延时关闭
         if (!on) {
             getImpl().setOption(SocketOptions.SO_LINGER, new Boolean(on));
+        // 启用延时关闭，如果 linger 为 0，那么会立即关闭
+        // linger 最大为 65535 秒，约 18 小时
         } else {
             if (linger < 0) {
                 throw new IllegalArgumentException("invalid value for SO_LINGER");
@@ -1086,15 +1088,18 @@ class Socket implements java.io.Closeable {
      * Enable/disable {@link SocketOptions#SO_OOBINLINE SO_OOBINLINE}
      * (receipt of TCP urgent data)
      *
-     * By default, this option is disabled and TCP urgent data received on a
-     * socket is silently discarded. If the user wishes to receive urgent data, then
-     * this option must be enabled. When enabled, urgent data is received
-     * inline with normal data.
+     * 默认情况下，该选项被禁用，表示接收到 TCP urgent data 时，数据将被默默丢弃
+     * By default, this option is disabled and TCP urgent data received on a socket is silently discarded.
+     * 如果希望接受 urgent data 数据，该选项必须开启
+      If the user wishes to receive urgent data, then this option must be enabled.
+      When enabled, urgent data is received inline with normal data.
      * <p>
-     * Note, only limited support is provided for handling incoming urgent
-     * data. In particular, no notification of incoming urgent data is provided
-     * and there is no capability to distinguish between normal data and urgent
-     * data unless provided by a higher level protocol.
+     * 只提供有限的功能来处理紧急数据
+     * Note, only limited support is provided for handling incoming urgent data.
+     * 一般是不提供紧急数据的通知的，除非有更高级协议的支持
+     * In particular, no notification of incoming urgent data is provided
+      and there is no capability to distinguish between normal data and urgent
+      data unless provided by a higher level protocol.
      *
      * @param on {@code true} to enable
      *           {@link SocketOptions#SO_OOBINLINE SO_OOBINLINE},
@@ -1139,6 +1144,7 @@ class Socket implements java.io.Closeable {
      *  Socket is still valid. The option <B>must</B> be enabled
      *  prior to entering the blocking operation to have effect. The
      *  timeout must be {@code > 0}.
+     *  设置 0 的话，就是无限超时的意思
      *  A timeout of zero is interpreted as an infinite timeout.
      *
      * @param timeout the specified timeout, in milliseconds.
@@ -1183,18 +1189,18 @@ class Socket implements java.io.Closeable {
      * Sets the {@link SocketOptions#SO_SNDBUF SO_SNDBUF} option to the
      * specified value for this {@code Socket}.
      * The {@link SocketOptions#SO_SNDBUF SO_SNDBUF} option is used by the
-     * platform's networking code as a hint for the size to set the underlying
-     * network I/O buffers.
+      platform's networking code as a hint for the size to set the underlying
+      network I/O buffers.
      *
      * <p>Because {@link SocketOptions#SO_SNDBUF SO_SNDBUF} is a hint,
      * applications that want to verify what size the buffers were set to
-     * should call {@link #getSendBufferSize()}.
+      should call {@link #getSendBufferSize()}.
      *
      * @exception SocketException if there is an error
-     * in the underlying protocol, such as a TCP error.
+      in the underlying protocol, such as a TCP error.
      *
      * @param size the size to which to set the send buffer
-     * size. This value must be greater than 0.
+      size. This value must be greater than 0.
      *
      * @exception IllegalArgumentException if the
      * value is 0 or is negative.
@@ -1239,30 +1245,38 @@ class Socket implements java.io.Closeable {
     /**
      * Sets the {@link SocketOptions#SO_RCVBUF SO_RCVBUF} option to the
      * specified value for this {@code Socket}. The
-     * {@link SocketOptions#SO_RCVBUF SO_RCVBUF} option is
-     * used by the platform's networking code as a hint for the size to set
-     * the underlying network I/O buffers.
+      {@link SocketOptions#SO_RCVBUF SO_RCVBUF} option is
+      used by the platform's networking code as a hint for the size to set
+      the underlying network I/O buffers.
      *
-     * <p>Increasing the receive buffer size can increase the performance of
-     * network I/O for high-volume connection, while decreasing it can
-     * help reduce the backlog of incoming data.
+     * 增加接受缓冲值可以提高大数据量传递时的 IO 的性能，减少时，可以帮助减少数据的积压
+     * Increasing the receive buffer size can increase the performance of
+      network I/O for high-volume connection, while decreasing it can
+      help reduce the backlog of incoming data.
      *
      * <p>Because {@link SocketOptions#SO_RCVBUF SO_RCVBUF} is a hint,
      * applications that want to verify what size the buffers were set to
      * should call {@link #getReceiveBufferSize()}.
      *
      * <p>The value of {@link SocketOptions#SO_RCVBUF SO_RCVBUF} is also used
-     * to set the TCP receive window that is advertized to the remote peer.
-     * Generally, the window size can be modified at any time when a socket is
-     * connected. However, if a receive window larger than 64K is required then
-     * this must be requested <B>before</B> the socket is connected to the
-     * remote peer. There are two cases to be aware of:
+      to set the TCP receive window that is advertized to the remote peer.
+     通常来说，在套接字建立连接之后，可以随意修改窗口大小
+      Generally, the window size can be modified at any time when a socket is
+      connected.
+     然而，当窗口大小大于 64k 时，需要注意：
+     1：必须在 Socket 连接客户端之前设置缓冲值
+     2：必须在 ServerSocket 绑定本地地址之前设置缓冲值
+      However, if a receive window larger than 64K is required then
+      this must be requested before the socket is connected to the
+      remote peer. There are two cases to be aware of:
      * <ol>
      * <li>For sockets accepted from a ServerSocket, this must be done by calling
-     * {@link ServerSocket#setReceiveBufferSize(int)} before the ServerSocket
-     * is bound to a local address.<p></li>
-     * <li>For client sockets, setReceiveBufferSize() must be called before
-     * connecting the socket to its remote peer.</li></ol>
+       before the ServerSocket is bound to a local address.
+     <p></li>
+     * <li>
+     *   For client sockets, setReceiveBufferSize() must be called before
+      connecting the socket to its remote peer.
+     </li></ol>
      * @param size the size to which to set the receive buffer
      * size. This value must be greater than 0.
      *
@@ -1420,19 +1434,21 @@ class Socket implements java.io.Closeable {
      * Enable/disable the {@link SocketOptions#SO_REUSEADDR SO_REUSEADDR}
      * socket option.
      * <p>
-     * When a TCP connection is closed the connection may remain
-     * in a timeout state for a period of time after the connection
-     * is closed (typically known as the {@code TIME_WAIT} state
-     * or {@code 2MSL} wait state).
-     * For applications using a well known socket address or port
-     * it may not be possible to bind a socket to the required
-     * {@code SocketAddress} if there is a connection in the
-     * timeout state involving the socket address or port.
+        套接字在关闭之后，可能会等待一段时间之后才会真正的关闭，如果此时有新的套接字前来绑定同样的地址和端口时，
+        如果 setReuseAddress 为 true 的话，就可以绑定成功，否则绑定失败
+      When a TCP connection is closed the connection may remain
+      in a timeout state for a period of time after the connection
+      is closed (typically known as the {@code TIME_WAIT} state
+      or {@code 2MSL} wait state).
+      For applications using a well known socket address or port
+      it may not be possible to bind a socket to the required
+      {@code SocketAddress} if there is a connection in the
+      timeout state involving the socket address or port.
      * <p>
-     * Enabling {@link SocketOptions#SO_REUSEADDR SO_REUSEADDR}
-     * prior to binding the socket using {@link #bind(SocketAddress)} allows
-     * the socket to be bound even though a previous connection is in a timeout
-     * state.
+     Enabling {@link SocketOptions#SO_REUSEADDR SO_REUSEADDR}
+     prior to binding the socket using {@link #bind(SocketAddress)} allows
+     the socket to be bound even though a previous connection is in a timeout
+     state.
      * <p>
      * When a {@code Socket} is created the initial setting
      * of {@link SocketOptions#SO_REUSEADDR SO_REUSEADDR} is disabled.
